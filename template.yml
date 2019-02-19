@@ -1,0 +1,60 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: >
+  Echo me back some headers
+
+Globals:
+  Function:
+    Runtime: "nodejs8.10"
+
+
+Parameters:
+  Stage:
+    Type: String
+    Default: Dev
+    Description: Stage/environment discriminator
+
+Resources:
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: "sts:AssumeRole"
+      Path: "/"
+      Policies:
+        - PolicyName: AllKidsLoveLog
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                  - logs:CreateLogGroup
+                Resource:
+                  - "arn:aws:logs:*:*:*"
+
+  Headers:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: headers.echo
+      CodeUri: src/
+      Role: !GetAtt [ LambdaExecutionRole, Arn ]
+      Events:
+        EchoEvent:
+          Type: Api
+          Properties:
+            Path: /echo
+            Method: get
+
+Outputs:
+
+  # Form endpoint url for convenience - note if we don't supply a gateway def 
+  # we get Stage and Prod stages defined for us
+  EchoEndpoint:
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Stage/echo"
